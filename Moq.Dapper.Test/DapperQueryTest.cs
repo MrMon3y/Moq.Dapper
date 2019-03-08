@@ -1,29 +1,14 @@
-﻿using System;
+﻿using Dapper;
+using NUnit.Framework;
+using System;
 using System.Data;
 using System.Linq;
-using Dapper;
-using NUnit.Framework;
 
 namespace Moq.Dapper.Test
 {
     [TestFixture]
     public class DapperQueryTest
     {
-        [Test]
-        public void QueryFirstOrDefault()
-        {
-            var connection = new Mock<IDbConnection>();
-
-            const int expected = 7;
-
-            connection.SetupDapper(c => c.QueryFirstOrDefault<int>(It.IsAny<string>(), null, null, null, null))
-                      .Returns(expected);
-
-            var actual = connection.Object.QueryFirstOrDefault<int>("");
-
-            Assert.That(actual, Is.EqualTo(expected));
-        }
-
         [Test]
         public void QueryGeneric()
         {
@@ -97,17 +82,6 @@ namespace Moq.Dapper.Test
 
                 Assert.That(match.Count, Is.EqualTo(1));
             }
-        }
-
-        public class ComplexType
-        {
-            public int IntegerProperty { get; set; }
-            public string StringProperty { get; set; }
-            public Guid GuidProperty { get; set; }
-            public DateTime DateTimeProperty { get; set; }
-            public DateTime? NullableDateTimeProperty { get; set; }
-            public int? NullableIntegerProperty { get; set; }
-            public byte[] ByteArrayPropery { get; set; }
         }
     }
 }

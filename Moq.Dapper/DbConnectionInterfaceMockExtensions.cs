@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Dapper;
+using Moq.Language.Flow;
+using Moq.Protected;
+using System;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Dapper;
-using Moq.Language.Flow;
-using Moq.Protected;
 
 namespace Moq.Dapper
 {
@@ -29,6 +29,7 @@ namespace Moq.Dapper
 
                 case nameof(SqlMapper.Query):
                 case nameof(SqlMapper.QueryFirstOrDefault):
+                case nameof(SqlMapper.QuerySingleOrDefault):
                     return SetupQuery<TResult>(mock);
 
                 default:
@@ -46,13 +47,16 @@ namespace Moq.Dapper
             switch (call.Method.Name)
             {
                 case nameof(SqlMapper.QueryAsync):
+                case nameof(SqlMapper.QueryFirstOrDefaultAsync):
+                case nameof(SqlMapper.QuerySingleOrDefaultAsync):
                     return SetupQueryAsync<TResult>(mock);
+
                 default:
                     throw new NotSupportedException();
             }
         }
 
-        static ISetup<IDbConnection, Task<TResult>> SetupQueryAsync<TResult>(Mock<IDbConnection> mock) =>
+        private static ISetup<IDbConnection, Task<TResult>> SetupQueryAsync<TResult>(Mock<IDbConnection> mock) =>
             DbCommandSetup.SetupCommandAsync<TResult, IDbConnection>(mock, (commandMock, result) =>
             {
                 commandMock.Protected()
@@ -60,7 +64,7 @@ namespace Moq.Dapper
                            .ReturnsAsync(() => DbDataReaderFactory.DbDataReader(result));
             });
 
-        static ISetup<IDbConnection, TResult> SetupQuery<TResult>(Mock<IDbConnection> mock) =>
+        private static ISetup<IDbConnection, TResult> SetupQuery<TResult>(Mock<IDbConnection> mock) =>
             SetupCommand<TResult>(mock, (commandMock, getResult) =>
             {
                 commandMock.Setup(command => command.ExecuteReader(It.IsAny<CommandBehavior>()))
@@ -68,7 +72,7 @@ namespace Moq.Dapper
                                                      .ToDataTableReader());
             });
 
-        static ISetup<IDbConnection, TResult> SetupCommand<TResult>(Mock<IDbConnection> mock, Action<Mock<IDbCommand>, Func<TResult>> mockResult)
+        private static ISetup<IDbConnection, TResult> SetupCommand<TResult>(Mock<IDbConnection> mock, Action<Mock<IDbCommand>, Func<TResult>> mockResult)
         {
             var setupMock = new Mock<ISetup<IDbConnection, TResult>>();
             var returnsMock = new Mock<IReturnsResult<IDbConnection>>();
@@ -108,12 +112,12 @@ namespace Moq.Dapper
             return setupMock.Object;
         }
 
-        static ISetup<IDbConnection, TResult> SetupExecuteScalar<TResult>(Mock<IDbConnection> mock) =>
+        private static ISetup<IDbConnection, TResult> SetupExecuteScalar<TResult>(Mock<IDbConnection> mock) =>
             SetupCommand<TResult>(mock, (commandMock, result) =>
                 commandMock.Setup(command => command.ExecuteScalar())
                            .Returns(() => result()));
 
-        static ISetup<IDbConnection, int> SetupExecute(Mock<IDbConnection> mock) =>
+        private static ISetup<IDbConnection, int> SetupExecute(Mock<IDbConnection> mock) =>
             SetupCommand<int>(mock, (commandMock, result) =>
                 commandMock.Setup(command => command.ExecuteNonQuery())
                            .Returns(result));
