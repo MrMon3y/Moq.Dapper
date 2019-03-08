@@ -6,13 +6,23 @@ using System.Linq;
 
 namespace Moq.Dapper
 {
-    static class DbDataReaderFactory
+    internal static class DbDataReaderFactory
     {
         internal static DbDataReader DbDataReader<TResult>(Func<TResult> result)
         {
-            // TResult must be IEnumerable if we're invoking SqlMapper.Query.
-            var enumerable = (IEnumerable)result();
+            var val = result();
+            switch (val)
+            {
+                case IEnumerable enumerable:
+                    return new DataTableReader(EnumerableToDataTable<TResult>(enumerable));
 
+                default:
+                    return val.ToDataTable(typeof(TResult)).ToDataTableReader();
+            }
+        }
+
+        private static DataTable EnumerableToDataTable<TResult>(IEnumerable enumerable)
+        {
             var dataTable = new DataTable();
 
             // Assuming SqlMapper.Query returns always generic IEnumerable<TResult>.
@@ -64,7 +74,7 @@ namespace Moq.Dapper
                     dataTable.Rows.Add(valuesFactory.Select(getValue => getValue(element)).ToArray());
             }
 
-            return new DataTableReader(dataTable);
+            return dataTable;
         }
     }
 }
